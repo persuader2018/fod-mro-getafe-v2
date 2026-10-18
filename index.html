@@ -314,16 +314,16 @@
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
-              <i class="fa-solid fa-cloud text-blue-600 mr-1.5"></i> Sincronización en la Nube (Activa)
+              <i class="fa-solid fa-cloud text-blue-600 mr-1.5"></i> Sincronización en la Nube (v2 Activa)
             </h2>
-            <p class="text-xs text-slate-500 mt-0.5">Conectado a la base de datos de Getafe en tiempo real.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Conectado a la base de datos v2 de Getafe en tiempo real.</p>
           </div>
         </div>
 
         <div class="space-y-2">
           <label class="block text-xs font-semibold text-slate-600">URL DE FIREBASE REALTIME DATABASE</label>
           <input type="url" id="firebase-url-input"
-            value="https://fod-mro-getafe-default-rtdb.europe-west1.firebasedatabase.app"
+            value="https://fod-mro-getafe-v2-default-rtdb.europe-west1.firebasedatabase.app"
             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
 
@@ -406,7 +406,7 @@
         <ul id="config-points-list" class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden"></ul>
 
         <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
-          <span class="text-xs text-slate-400">FOD MRO Getafe v2.2 PWA</span>
+          <span class="text-xs text-slate-400">FOD MRO Getafe v3.0 Cloud</span>
           <button onclick="resetDemoData()" class="text-xs text-red-600 hover:underline font-semibold">
             <i class="fa-solid fa-rotate-left mr-1"></i> Restaurar datos iniciales
           </button>
@@ -494,11 +494,13 @@
 
   <!-- LÓGICA DE LA APLICACIÓN + SINCRONIZACIÓN CLOUD -->
   <script>
-    const STORAGE_KEY = 'FOD_MRO_GETAFE_STATE_V2';
-    const CLOUD_URL_KEY = 'FOD_MRO_GETAFE_FIREBASE_URL';
+    // Claves V3 limpias para evitar conflictos con la caché o URL antigua en los móviles
+    const STORAGE_KEY = 'FOD_MRO_GETAFE_STATE_V3';
+    const CLOUD_URL_KEY = 'FOD_MRO_GETAFE_FIREBASE_URL_V3';
     const SHIFTS = ['Mañana', 'Tarde', 'Noche', '4º Turno'];
 
-    const DEFAULT_FIREBASE_URL = 'https://fod-mro-getafe-default-rtdb.europe-west1.firebasedatabase.app';
+    // TU NUEVA BASE DE DATOS V2 INTEGRADA POR DEFECTO:
+    const DEFAULT_FIREBASE_URL = 'https://fod-mro-getafe-v2-default-rtdb.europe-west1.firebasedatabase.app';
 
     let firebaseBaseUrl = cleanFirebaseUrl(localStorage.getItem(CLOUD_URL_KEY) || DEFAULT_FIREBASE_URL);
     let sseConnection = null;
@@ -654,7 +656,7 @@
     async function pullFromCloud(notifyUser = false) {
       if (!firebaseBaseUrl) return;
       try {
-        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json`, { cache: 'no-store' });
+        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const remoteData = await res.json();
         if (remoteData) {
@@ -705,12 +707,20 @@
           }
         });
         sseConnection.onerror = () => {
-          updateCloudIndicator('error', 'Reconectando...');
+          // Si EventSource no es compatible en la red móvil, mantenemos polling silencioso sin marcar error falso
+          pullFromCloud(false);
         };
       } catch (err) {
         console.error(err);
       }
     }
+
+    // Refresco automático de respaldo cada 12 segundos para redes móviles que cortan EventSource
+    setInterval(() => {
+      if (firebaseBaseUrl && !isApplyingRemoteUpdate) {
+        pullFromCloud(false);
+      }
+    }, 12000);
 
     function saveCloudConfig() {
       const rawUrl = document.getElementById('firebase-url-input').value;
