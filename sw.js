@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fod-mro-getafe-v2.3';
+const CACHE_NAME = 'fod-mro-getafe-v2.4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -41,7 +41,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia Network-First con respaldo en Caché para tener siempre la última versión
+  // Estrategia Network-First con respaldo en Caché
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
