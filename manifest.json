@@ -1,0 +1,20 @@
+{
+  "name": "FOD MRO Getafe - Control de Taller",
+  "short_name": "FOD Getafe",
+  "description": "Supervisión y control FOD de mantenimiento aeronáutico en MRO Getafe.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "es-ES",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

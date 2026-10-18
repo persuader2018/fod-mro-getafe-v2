@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <rect x="36" y="36" width="440" height="440" rx="84" fill="#2563eb"/>
+  <path d="M256 96l36 124 132 36-132 36-36 124-36-124-132-36 132-36z" fill="#ffffff" opacity="0.15"/>
+  <path d="M280 180V116c0-13.3-10.7-24-24-24s-24 10.7-24 24v64L112 256v36l120-36v84l-36 28v28l60-18 60 18v-28l-36-28v-84l120 36v-36L280 180z" fill="#ffffff"/>
+  <text x="256" y="448" font-family="Arial, sans-serif" font-weight="900" font-size="52" fill="#ffffff" text-anchor="middle" letter-spacing="4">FOD MRO</text>
+</svg>

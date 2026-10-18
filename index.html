@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FOD MRO Getafe - Cloud Sync</title>
+
+  <!-- CONFIGURACIÓN PWA (Oculta la barra de direcciones en Android y iPhone) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FOD Getafe">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- html2pdf.js para exportación PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- QRCode.js para generar el cartel QR del taller -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: #f1f5f9;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+    .safe-bottom {
+      padding-bottom: 5.5rem;
+    }
+    #pdf-report-template {
+      background: white;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- BARRA SUPERIOR FIJA -->
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-blue-600 p-2 rounded-lg shadow-inner">
+          <i class="fa-solid fa-plane-up text-xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg tracking-wide leading-none">FOD MRO GETAFE</h1>
+          <p class="text-xs text-slate-400 mt-0.5">Control de Taller · Multidispositivo</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <!-- Botón de Instalación directa en Android/Chrome -->
+        <button id="install-pwa-btn" onclick="installPWA()" class="hidden bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center space-x-1 shadow">
+          <i class="fa-solid fa-download"></i>
+          <span>Instalar App</span>
+        </button>
+        <!-- Indicador de Estado Cloud -->
+        <button onclick="switchTab('config')" id="cloud-status-pill" class="flex items-center space-x-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full text-[11px] font-semibold text-slate-300">
+          <span id="cloud-status-dot" class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          <span id="cloud-status-text">Conectando...</span>
+        </button>
+        <span id="header-cw-badge" class="bg-slate-800 border border-slate-700 text-blue-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+          CW42
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-3xl mx-auto px-3 pt-4 safe-bottom">
+
+    <!-- ==========================================
+         PESTAÑA 1: RONDA FOD (INSPECCIÓN)
+         ========================================== -->
+    <section id="tab-ronda" class="tab-content space-y-4">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+            <i class="fa-solid fa-sliders text-blue-600 mr-1.5"></i> Datos del Turno
+          </h2>
+          <span id="sync-roster-badge" class="text-xs text-emerald-600 font-medium hidden">
+            <i class="fa-solid fa-circle-check"></i> Asignado por cuadrante
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">SEMANA (CW)</label>
+            <select id="ronda-cw" onchange="onRondaContextChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">DÍA</label>
+            <select id="ronda-day" onchange="onRondaContextChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">TURNO</label>
+            <select id="ronda-shift" onchange="onRondaContextChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="Mañana">Mañana</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Noche">Noche</option>
+              <option value="4º Turno">4º Turno (S-D)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">ZONA</label>
+            <select id="ronda-zone" onchange="onRondaContextChange()" class="w-full bg-blue-50 border border-blue-300 text-blue-900 rounded-lg px-2.5 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Nº EMPLEADO</label>
+            <div class="relative">
+              <i class="fa-solid fa-id-badge absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+              <input type="text" id="ronda-emp-id" placeholder="Ej. 10452" class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">NOMBRE DEL RESPONSABLE</label>
+            <div class="relative">
+              <i class="fa-solid fa-user-check absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+              <input type="text" id="ronda-emp-name" placeholder="Nombre y Apellidos" class="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicador en vivo del Estado de la Ronda -->
+      <div id="ronda-status-banner" class="rounded-xl p-3.5 flex items-center justify-between bg-slate-200 text-slate-700 font-bold transition-all shadow-sm">
+        <div class="flex items-center space-x-2.5">
+          <i id="ronda-status-icon" class="fa-solid fa-circle-question text-xl"></i>
+          <div>
+            <div class="text-xs uppercase tracking-wider opacity-80">Resultado de la Ronda</div>
+            <div id="ronda-status-text" class="text-base">PENDIENTE DE COMPLETAR</div>
+          </div>
+        </div>
+        <span id="ronda-progress-badge" class="text-xs bg-white/80 text-slate-800 px-2.5 py-1 rounded-full font-semibold">0/0 puntos</span>
+      </div>
+
+      <!-- Lista de Puntos del Checklist -->
+      <div id="ronda-checklist-container" class="space-y-3"></div>
+
+      <!-- Botón Guardar Ronda -->
+      <button onclick="saveRondaInspection()" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-md flex items-center justify-center space-x-2 text-base transition">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <span>GUARDAR Y SINCRONIZAR RONDA FOD</span>
+      </button>
+
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 2: INCIDENCIAS FOD
+         ========================================== -->
+    <section id="tab-incidencias" class="tab-content hidden space-y-4">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+            <i class="fa-solid fa-filter text-blue-600 mr-1.5"></i> Filtrar Incidencias FOD
+          </h2>
+          <button onclick="pullFromCloud(true)" class="text-xs text-blue-600 font-bold flex items-center space-x-1 hover:underline">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Actualizar ahora</span>
+          </button>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">SEMANA</label>
+            <select id="filter-inc-cw" onchange="renderIncidents()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-semibold"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">DÍA</label>
+            <select id="filter-inc-day" onchange="renderIncidents()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-semibold">
+              <option value="TODOS">Todos</option>
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">ESTADO</label>
+            <select id="filter-inc-status" onchange="renderIncidents()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-semibold">
+              <option value="TODOS">Todos</option>
+              <option value="PENDIENTE">Pendientes (Rojo)</option>
+              <option value="RESUELTA">Resueltas (Verde)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="incidents-list-container" class="space-y-3"></div>
+
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 3: CUADRANTE SEMANAL
+         ========================================== -->
+    <section id="tab-cuadrante" class="tab-content hidden space-y-4">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+              <i class="fa-solid fa-calendar-check text-blue-600 mr-1.5"></i> Asignación de Personal
+            </h2>
+            <p class="text-xs text-slate-500">Se sincroniza en todos los dispositivos del taller.</p>
+          </div>
+          <select id="roster-cw" onchange="renderRoster()" class="bg-blue-50 border border-blue-300 text-blue-900 rounded-lg px-3 py-1.5 text-sm font-bold"></select>
+        </div>
+
+        <div id="roster-grid-container" class="space-y-4 pt-2"></div>
+
+        <button onclick="saveRoster()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow flex items-center justify-center space-x-2 text-sm transition">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>GUARDAR Y PUBLICAR CUADRANTE</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 4: INFORME DIARIO Y PDF
+         ========================================== -->
+    <section id="tab-informe" class="tab-content hidden space-y-4">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+          <i class="fa-solid fa-file-pdf text-red-600 mr-1.5"></i> Generador de Informe Diario
+        </h2>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">SEMANA (CW)</label>
+            <select id="report-cw" onchange="renderReportPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold"></select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">DÍA DE LA SEMANA</label>
+            <select id="report-day" onchange="renderReportPreview()" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-sm font-semibold">
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="exportReportToPDF()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-4 rounded-xl shadow flex items-center justify-center space-x-2 text-sm transition">
+          <i class="fa-solid fa-download"></i>
+          <span>EXPORTAR INFORME DIARIO EN PDF</span>
+        </button>
+      </div>
+
+      <!-- Plantilla Visual del Informe -->
+      <div id="pdf-report-template" class="rounded-xl shadow-sm border border-slate-200 p-5 space-y-5">
+        <div class="border-b-2 border-slate-800 pb-3 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-blue-600 uppercase tracking-widest">Mantenimiento Aeronáutico</div>
+            <h2 class="text-xl font-black text-slate-900">INFORME DIARIO FOD - MRO GETAFE</h2>
+          </div>
+          <div class="text-right">
+            <div id="pdf-header-date" class="text-sm font-bold text-slate-800">CW42 - Lunes</div>
+            <div id="pdf-header-timestamp" class="text-xs text-slate-500">Generado: --/--/----</div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Estado de Rondas por Turno y Zona</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr id="pdf-rondas-thead-tr" class="bg-slate-100 text-slate-700 border-b border-slate-300"></tr>
+              </thead>
+              <tbody id="pdf-rondas-tbody" class="divide-y divide-slate-200"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Incidencias FOD Registradas en el Día</h3>
+          <div id="pdf-incidents-container" class="space-y-2.5"></div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex justify-between items-center text-[11px] text-slate-400">
+          <span>Sistema de Gestión FOD MRO Getafe</span>
+          <span>Documento de Control de Calidad y Seguridad Industrial</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 5: CONFIGURACIÓN, ZONAS, QR Y CLOUD
+         ========================================== -->
+    <section id="tab-config" class="tab-content hidden space-y-4">
+      
+      <!-- Gestión de Zonas y Puntos de Checklist -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <i class="fa-solid fa-map-location-dot text-blue-600 mr-1.5"></i> Gestión de Zonas y Checklist
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Edita el nombre de cada zona, añade o elimina zonas y configura sus puntos.</p>
+          </div>
+          <button onclick="addNewZone()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 shadow-sm transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Nueva Zona</span>
+          </button>
+        </div>
+
+        <!-- Selector de Zona a editar -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">SELECCIONAR ZONA</label>
+          <select id="config-zone-select" onchange="renderConfigChecklist()" class="w-full bg-blue-50 border border-blue-300 text-blue-900 rounded-lg px-3 py-2 text-sm font-bold outline-none"></select>
+        </div>
+
+        <!-- Editar Nombre de la Zona o Eliminarla -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <label class="block text-xs font-semibold text-slate-600">NOMBRE DE LA ZONA SELECCIONADA</label>
+          <div class="flex flex-wrap sm:flex-nowrap gap-2">
+            <input type="text" id="edit-zone-name-input" placeholder="Ej. Zona 1" class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="renameSelectedZone()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 transition">
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span>Renombrar</span>
+            </button>
+            <button onclick="deleteSelectedZone()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1 shrink-0 transition" title="Eliminar esta zona">
+              <i class="fa-solid fa-trash-can"></i>
+              <span>Borrar Zona</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Puntos del Checklist de la Zona -->
+        <div class="space-y-2.5 pt-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase">Puntos de control FOD de esta zona</label>
+          <div class="flex space-x-2">
+            <input type="text" id="new-point-input" placeholder="Añadir nuevo punto de control FOD..." class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="addConfigPoint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm flex items-center space-x-1 shrink-0 transition">
+              <i class="fa-solid fa-plus"></i>
+              <span>Añadir</span>
+            </button>
+          </div>
+
+          <ul id="config-points-list" class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden"></ul>
+        </div>
+      </div>
+
+      <!-- Panel de Sincronización en la Nube (Firebase) -->
+      <div class="bg-white rounded-xl shadow-sm border border-blue-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <i class="fa-solid fa-cloud text-blue-600 mr-1.5"></i> Sincronización en la Nube (Activa)
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Conectado a la base de datos de Getafe en tiempo real.</p>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-semibold text-slate-600">URL DE FIREBASE REALTIME DATABASE</label>
+          <input type="url" id="firebase-url-input"
+            value="https://fod-mro-getafe-default-rtdb.europe-west1.firebasedatabase.app"
+            class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button onclick="saveCloudConfig()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Reconectar / Actualizar</span>
+          </button>
+          <button onclick="pushToCloud(true)" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-3 rounded-lg text-xs flex items-center space-x-1">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Forzar Subida</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel Generador de QR para el Taller -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              <i class="fa-solid fa-qrcode text-blue-600 mr-1.5"></i> Código QR de Acceso al Taller
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Escanea con el móvil para abrir la app directamente en planta.</p>
+          </div>
+          <button onclick="generateWorkshopQR()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-lg shrink-0">
+            Generar QR
+          </button>
+        </div>
+        <div id="qr-container" class="hidden pt-3 border-t border-slate-100 flex flex-col items-center space-y-2">
+          <div id="qrcode-box" class="p-3 bg-white border-2 border-slate-900 rounded-xl"></div>
+          <p id="qr-url-label" class="text-[11px] font-mono text-slate-500 break-all text-center"></p>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+          <span class="text-xs text-slate-400">FOD MRO Getafe v2.3 PWA</span>
+          <button onclick="resetDemoData()" class="text-xs text-red-600 hover:underline font-semibold">
+            <i class="fa-solid fa-rotate-left mr-1"></i> Restaurar datos iniciales
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL PARA VER FOTO EN GRANDE -->
+  <div id="photo-modal" onclick="closePhotoModal()" class="fixed inset-0 bg-black/80 z-50 hidden flex items-center justify-center p-4">
+    <div class="max-w-lg w-full bg-white rounded-xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+      <div class="bg-slate-900 text-white px-4 py-2.5 flex justify-between items-center">
+        <span id="photo-modal-title" class="text-xs font-bold uppercase tracking-wider">Evidencia Fotográfica FOD</span>
+        <button onclick="closePhotoModal()" class="text-slate-400 hover:text-white">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-3 bg-slate-100 flex justify-center">
+        <img id="photo-modal-img" src="" alt="Foto FOD" class="max-h-[70vh] object-contain rounded-lg">
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICACIÓN TOAST -->
+  <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-xl text-xs font-bold flex items-center space-x-2 z-50 transition-all opacity-0 pointer-events-none">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-msg">Operación realizada</span>
+  </div>
+
+  <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 shadow-lg z-40">
+    <div class="max-w-3xl mx-auto grid grid-cols-5">
+      <button onclick="switchTab('ronda')" id="nav-ronda" class="nav-btn py-2.5 flex flex-col items-center justify-center text-blue-600 font-bold">
+        <i class="fa-solid fa-clipboard-check text-lg"></i>
+        <span class="text-[11px] mt-0.5">Ronda FOD</span>
+      </button>
+      <button onclick="switchTab('incidencias')" id="nav-incidencias" class="nav-btn py-2.5 flex flex-col items-center justify-center text-slate-400 font-medium relative">
+        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        <span class="text-[11px] mt-0.5">Incidencias</span>
+        <span id="nav-inc-badge" class="hidden absolute top-1.5 right-4 bg-red-600 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+      </button>
+      <button onclick="switchTab('cuadrante')" id="nav-cuadrante" class="nav-btn py-2.5 flex flex-col items-center justify-center text-slate-400 font-medium">
+        <i class="fa-solid fa-users-gear text-lg"></i>
+        <span class="text-[11px] mt-0.5">Cuadrante</span>
+      </button>
+      <button onclick="switchTab('informe')" id="nav-informe" class="nav-btn py-2.5 flex flex-col items-center justify-center text-slate-400 font-medium">
+        <i class="fa-solid fa-file-pdf text-lg"></i>
+        <span class="text-[11px] mt-0.5">Informe PDF</span>
+      </button>
+      <button onclick="switchTab('config')" id="nav-config" class="nav-btn py-2.5 flex flex-col items-center justify-center text-slate-400 font-medium">
+        <i class="fa-solid fa-sliders text-lg"></i>
+        <span class="text-[11px] mt-0.5">Zonas/Cloud</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- REGISTRO DE SERVICE WORKER Y BOTÓN DE INSTALACIÓN PWA -->
+  <script>
+    let deferredPrompt = null;
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW:', err));
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('install-pwa-btn');
+      if (btn) btn.classList.remove('hidden');
+    });
+
+    async function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('install-pwa-btn').classList.add('hidden');
+      }
+      deferredPrompt = null;
+    }
+  </script>
+
+  <!-- LÓGICA DE LA APLICACIÓN + SINCRONIZACIÓN CLOUD -->
+  <script>
+    const STORAGE_KEY = 'FOD_MRO_GETAFE_STATE_V2';
+    const CLOUD_URL_KEY = 'FOD_MRO_GETAFE_FIREBASE_URL';
+    const SHIFTS = ['Mañana', 'Tarde', 'Noche', '4º Turno'];
+
+    const DEFAULT_FIREBASE_URL = 'https://fod-mro-getafe-default-rtdb.europe-west1.firebasedatabase.app';
+
+    let firebaseBaseUrl = cleanFirebaseUrl(localStorage.getItem(CLOUD_URL_KEY) || DEFAULT_FIREBASE_URL);
+    let sseConnection = null;
+    let isApplyingRemoteUpdate = false;
+
+    const defaultState = {
+      currentCW: 'CW42',
+      zones: {
+        '1': {
+          name: 'Zona 1',
+          points: [
+            'Bancos libres de tornillería, remaches y restos metálicos',
+            'Panorámico de herramientas sombra 100% completo y cuadrado',
+            'Suelo perimetral de bancos barrido y sin virutas',
+            'Contenedores FOD cerrados e identificados correctamente'
+          ]
+        },
+        '2': {
+          name: 'Zona 2',
+          points: [
+            'Bandejas de tornos y fresadoras limpias de viruta sobrante',
+            'Equipos de medición calibrados y guardados en sus estuches',
+            'Ausencia de trapos, papeles o EPPs abandonados sobre máquinas',
+            'Rejillas de drenaje y cableado libres de objetos sueltos'
+          ]
+        },
+        '3': {
+          name: 'Zona 3',
+          points: [
+            'Pasillos de tránsito peatonal y carros libres de obstáculos',
+            'Cajas de subconjuntos aeronáuticos tapadas y protegidas',
+            'Zona de consumibles sin precintos, alambres o plásticos en el suelo',
+            'Carros de transporte de piezas limpios antes de cambio de turno'
+          ]
+        }
+      },
+      roster: {
+        'CW42': {
+          'Mañana': {
+            '1': { empId: '10234', name: 'Carlos Mendoza' },
+            '2': { empId: '10512', name: 'Laura Gómez' },
+            '3': { empId: '10890', name: 'Javier Ruiz' }
+          }
+        }
+      },
+      inspections: [],
+      incidents: [],
+      updatedAt: Date.now()
+    };
+
+    let appState = loadState();
+    let currentRondaPointsState = {};
+
+    function cleanFirebaseUrl(url) {
+      if (!url) return '';
+      let clean = url.trim().replace(/^Https:/i, 'https:').replace(/\/+$/, '');
+      if (clean.endsWith('.json')) clean = clean.replace(/\/[^\/]+\.json$/, '');
+      return clean;
+    }
+
+    function getZoneIds() {
+      return Object.keys(appState.zones || {}).sort((a, b) => Number(a) - Number(b));
+    }
+
+    function normalizeState(rawObj) {
+      const merged = Object.assign(JSON.parse(JSON.stringify(defaultState)), rawObj || {});
+      if (!Array.isArray(merged.inspections)) merged.inspections = Object.values(merged.inspections || {});
+      if (!Array.isArray(merged.incidents)) merged.incidents = Object.values(merged.incidents || {});
+      if (!merged.roster) merged.roster = {};
+      if (!merged.zones || Object.keys(merged.zones).length === 0) {
+        merged.zones = JSON.parse(JSON.stringify(defaultState.zones));
+      } else {
+        Object.keys(merged.zones).forEach(zid => {
+          if (!Array.isArray(merged.zones[zid].points)) {
+            merged.zones[zid].points = Object.values(merged.zones[zid].points || {});
+          }
+        });
+      }
+      return merged;
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { return normalizeState(JSON.parse(raw)); } catch (e) { console.error(e); }
+      }
+      return JSON.parse(JSON.stringify(defaultState));
+    }
+
+    function saveState() {
+      appState.updatedAt = Date.now();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      updatePendingIncidentsBadge();
+      if (firebaseBaseUrl && !isApplyingRemoteUpdate) {
+        pushToCloud(false);
+      }
+    }
+
+    function populateZoneSelects() {
+      const zoneIds = getZoneIds();
+      ['ronda-zone', 'config-zone-select'].forEach(selectId => {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const prevVal = sel.value;
+        sel.innerHTML = '';
+        zoneIds.forEach(zid => {
+          const opt = document.createElement('option');
+          opt.value = zid;
+          opt.textContent = appState.zones[zid].name;
+          sel.appendChild(opt);
+        });
+        if (prevVal && appState.zones[prevVal]) {
+          sel.value = prevVal;
+        } else if (zoneIds.length > 0) {
+          sel.value = zoneIds[0];
+        }
+      });
+    }
+
+    function updateCloudIndicator(status, label) {
+      const dot = document.getElementById('cloud-status-dot');
+      const text = document.getElementById('cloud-status-text');
+      text.textContent = label;
+      if (status === 'online') {
+        dot.className = 'h-2 w-2 rounded-full bg-emerald-400 animate-pulse';
+      } else if (status === 'error') {
+        dot.className = 'h-2 w-2 rounded-full bg-red-500';
+      } else {
+        dot.className = 'h-2 w-2 rounded-full bg-amber-400';
+      }
+    }
+
+    async function pushToCloud(notifyUser = false) {
+      if (!firebaseBaseUrl) return;
+      try {
+        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(appState)
+        });
+        if (res.ok) {
+          updateCloudIndicator('online', 'Cloud Activo');
+          if (notifyUser) showToast('Datos subidos a la nube correctamente');
+        } else {
+          updateCloudIndicator('error', 'Error Cloud');
+        }
+      } catch (err) {
+        console.error('Error subiendo a Firebase:', err);
+        updateCloudIndicator('error', 'Sin conexión');
+      }
+    }
+
+    async function pullFromCloud(notifyUser = false) {
+      if (!firebaseBaseUrl) return;
+      try {
+        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const remoteData = await res.json();
+        if (remoteData) {
+          isApplyingRemoteUpdate = true;
+          appState = normalizeState(remoteData);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+          populateZoneSelects();
+          refreshActiveViews();
+          isApplyingRemoteUpdate = false;
+          updateCloudIndicator('online', 'Cloud Activo');
+          if (notifyUser) showToast('Datos sincronizados desde la nube');
+        } else {
+          await pushToCloud(false);
+        }
+      } catch (err) {
+        console.error('Error descargando de Firebase:', err);
+        updateCloudIndicator('error', 'Error Sync');
+      }
+    }
+
+    function startRealtimeStream() {
+      if (sseConnection) {
+        sseConnection.close();
+        sseConnection = null;
+      }
+      if (!firebaseBaseUrl) {
+        updateCloudIndicator('local', 'Modo Local');
+        return;
+      }
+
+      try {
+        sseConnection = new EventSource(`${firebaseBaseUrl}/fod_getafe_state.json`);
+        sseConnection.addEventListener('put', (e) => {
+          try {
+            const packet = JSON.parse(e.data);
+            if (packet && packet.path === '/' && packet.data) {
+              if (packet.data.updatedAt && packet.data.updatedAt === appState.updatedAt) return;
+              isApplyingRemoteUpdate = true;
+              appState = normalizeState(packet.data);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+              populateZoneSelects();
+              refreshActiveViews();
+              isApplyingRemoteUpdate = false;
+              updateCloudIndicator('online', 'Cloud Activo');
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        });
+        sseConnection.onerror = () => {
+          updateCloudIndicator('error', 'Reconectando...');
+        };
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function saveCloudConfig() {
+      const rawUrl = document.getElementById('firebase-url-input').value;
+      const cleaned = cleanFirebaseUrl(rawUrl);
+      if (!cleaned.startsWith('https://')) {
+        alert('Introduce una URL válida de Firebase (debe empezar por https://)');
+        return;
+      }
+      firebaseBaseUrl = cleaned;
+      localStorage.setItem(CLOUD_URL_KEY, firebaseBaseUrl);
+      document.getElementById('firebase-url-input').value = firebaseBaseUrl;
+      pullFromCloud(true);
+      startRealtimeStream();
+    }
+
+    function refreshActiveViews() {
+      populateZoneSelects();
+      updatePendingIncidentsBadge();
+      if (!document.getElementById('tab-ronda').classList.contains('hidden')) onRondaContextChange();
+      if (!document.getElementById('tab-incidencias').classList.contains('hidden')) renderIncidents();
+      if (!document.getElementById('tab-cuadrante').classList.contains('hidden')) renderRoster();
+      if (!document.getElementById('tab-informe').classList.contains('hidden')) renderReportPreview();
+      if (!document.getElementById('tab-config').classList.contains('hidden')) renderConfigChecklist();
+    }
+
+    function generateWorkshopQR() {
+      const container = document.getElementById('qr-container');
+      const box = document.getElementById('qrcode-box');
+      const urlLabel = document.getElementById('qr-url-label');
+      const currentUrl = window.location.href;
+
+      box.innerHTML = '';
+      container.classList.remove('hidden');
+      urlLabel.textContent = currentUrl;
+
+      new QRCode(box, {
+        text: currentUrl,
+        width: 160,
+        height: 160,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2600);
+    }
+
+    function getCurrentISOWeek() {
+      const now = new Date();
+      const onejan = new Date(now.getFullYear(), 0, 1);
+      const week = Math.ceil((((now.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
+      return 'CW' + Math.min(Math.max(week, 1), 53);
+    }
+
+    function populateCWSelects() {
+      const selects = ['ronda-cw', 'filter-inc-cw', 'roster-cw', 'report-cw'];
+      selects.forEach(id => {
+        const el = document.getElementById(id);
+        el.innerHTML = '';
+        if (id === 'filter-inc-cw') {
+          const optAll = document.createElement('option');
+          optAll.value = 'TODAS';
+          optAll.textContent = 'Todas (CW)';
+          el.appendChild(optAll);
+        }
+        for (let i = 1; i <= 53; i++) {
+          const cw = `CW${i}`;
+          const opt = document.createElement('option');
+          opt.value = cw;
+          opt.textContent = cw;
+          el.appendChild(opt);
+        }
+        el.value = appState.currentCW || 'CW42';
+      });
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-blue-600', 'font-bold');
+        btn.classList.add('text-slate-400', 'font-medium');
+      });
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      activeBtn.classList.remove('text-slate-400', 'font-medium');
+      activeBtn.classList.add('text-blue-600', 'font-bold');
+
+      refreshActiveViews();
+    }
+
+    // ==========================================
+    // PESTAÑA 1: RONDA FOD (OK / NO OK / N/A)
+    // ==========================================
+    function onRondaContextChange() {
+      const cw = document.getElementById('ronda-cw').value;
+      const day = document.getElementById('ronda-day').value;
+      const shift = document.getElementById('ronda-shift').value;
+      const zoneId = document.getElementById('ronda-zone').value;
+
+      appState.currentCW = cw;
+      document.getElementById('header-cw-badge').textContent = cw;
+
+      const existingInsp = appState.inspections.find(
+        i => i.cw === cw && i.day === day && i.shift === shift && i.zoneId === zoneId
+      );
+
+      const badge = document.getElementById('sync-roster-badge');
+      const empIdInput = document.getElementById('ronda-emp-id');
+      const empNameInput = document.getElementById('ronda-emp-name');
+
+      if (existingInsp) {
+        empIdInput.value = existingInsp.empId;
+        empNameInput.value = existingInsp.empName;
+        badge.classList.add('hidden');
+        currentRondaPointsState = JSON.parse(JSON.stringify(existingInsp.pointsState || {}));
+      } else {
+        const assigned = appState.roster?.[cw]?.[shift]?.[zoneId];
+        if (assigned && (assigned.empId || assigned.name)) {
+          empIdInput.value = assigned.empId || '';
+          empNameInput.value = assigned.name || '';
+          badge.classList.remove('hidden');
+        } else {
+          empIdInput.value = '';
+          empNameInput.value = '';
+          badge.classList.add('hidden');
+        }
+        currentRondaPointsState = {};
+      }
+
+      renderRondaChecklist();
+    }
+
+    function renderRondaChecklist() {
+      const zoneId = document.getElementById('ronda-zone').value;
+      const zone = appState.zones[zoneId];
+      const container = document.getElementById('ronda-checklist-container');
+      container.innerHTML = '';
+
+      if (!zone) return;
+
+      (zone.points || []).forEach((pointText, idx) => {
+        const pState = currentRondaPointsState[idx] || { status: null, comment: '', photo: null };
+        const isOk = pState.status === 'OK';
+        const isNok = pState.status === 'NOK';
+        const isNa = pState.status === 'NA';
+
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-xl shadow-sm border transition-all p-3.5 ${
+          isOk ? 'border-emerald-400 bg-emerald-50/20' :
+          isNok ? 'border-red-400 bg-red-50/20' :
+          isNa ? 'border-slate-400 bg-slate-100/60' : 'border-slate-200'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start space-x-2.5">
+              <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-md mt-0.5">${idx + 1}</span>
+              <p class="text-sm font-semibold ${isNa ? 'text-slate-500 line-through' : 'text-slate-800'} leading-snug">${pointText}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <button type="button" onclick="setPointStatus(${idx}, 'OK')"
+              class="py-2 px-2 rounded-lg font-bold text-xs flex items-center justify-center space-x-1 border transition ${
+                isOk
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-emerald-50'
+              }">
+              <i class="fa-solid fa-check"></i>
+              <span>OK</span>
+            </button>
+
+            <button type="button" onclick="setPointStatus(${idx}, 'NOK')"
+              class="py-2 px-2 rounded-lg font-bold text-xs flex items-center justify-center space-x-1 border transition ${
+                isNok
+                  ? 'bg-red-600 text-white border-red-600 shadow-sm'
+                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-red-50'
+              }">
+              <i class="fa-solid fa-xmark"></i>
+              <span>NO OK</span>
+            </button>
+
+            <button type="button" onclick="setPointStatus(${idx}, 'NA')"
+              class="py-2 px-2 rounded-lg font-bold text-xs flex items-center justify-center space-x-1 border transition ${
+                isNa
+                  ? 'bg-slate-600 text-white border-slate-600 shadow-sm'
+                  : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-200'
+              }">
+              <i class="fa-solid fa-ban"></i>
+              <span>N/A</span>
+            </button>
+          </div>
+
+          ${isNok ? `
+            <div class="mt-3 pt-3 border-t border-red-200 space-y-2.5">
+              <div class="text-xs font-bold text-red-700 flex items-center space-x-1">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>REGISTRO DE INCIDENCIA FOD OBLIGATORIO</span>
+              </div>
+              <textarea
+                oninput="updatePointComment(${idx}, this.value)"
+                placeholder="Describe el objeto encontrado o anomalía FOD..."
+                class="w-full bg-white border border-red-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-red-500 outline-none"
+                rows="2">${pState.comment || ''}</textarea>
+              
+              <div class="flex items-center justify-between">
+                <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 transition">
+                  <i class="fa-solid fa-camera"></i>
+                  <span>${pState.photo ? 'Cambiar Foto' : 'Hacer / Subir Foto'}</span>
+                  <input type="file" accept="image/*" capture="environment" class="hidden" onchange="handlePointPhoto(${idx}, this)">
+                </label>
+
+                ${pState.photo ? `
+                  <div class="flex items-center space-x-2">
+                    <img src="${pState.photo}" onclick="openPhotoModal('${pState.photo}', 'Evidencia Punto #${idx + 1}')" class="h-10 w-10 object-cover rounded-lg border border-red-400 cursor-pointer">
+                    <span class="text-[11px] text-emerald-700 font-semibold"><i class="fa-solid fa-check"></i> Foto lista</span>
+                  </div>
+                ` : `<span class="text-[11px] text-slate-500">Sin foto adjunta</span>`}
+              </div>
+            </div>
+          ` : ''}
+        `;
+        container.appendChild(card);
+      });
+
+      updateRondaBanner();
+    }
+
+    function setPointStatus(idx, status) {
+      if (!currentRondaPointsState[idx]) {
+        currentRondaPointsState[idx] = { status: null, comment: '', photo: null };
+      }
+      currentRondaPointsState[idx].status = status;
+      renderRondaChecklist();
+    }
+
+    function updatePointComment(idx, val) {
+      if (currentRondaPointsState[idx]) {
+        currentRondaPointsState[idx].comment = val;
+      }
+    }
+
+    function handlePointPhoto(idx, inputEl) {
+      const file = inputEl.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 600;
+          const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+          currentRondaPointsState[idx].photo = dataUrl;
+          renderRondaChecklist();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateRondaBanner() {
+      const zoneId = document.getElementById('ronda-zone').value;
+      const zone = appState.zones[zoneId];
+      const totalPoints = zone ? (zone.points || []).length : 0;
+      let checkedCount = 0;
+      let hasNok = false;
+
+      for (let i = 0; i < totalPoints; i++) {
+        const st = currentRondaPointsState[i]?.status;
+        if (st === 'OK' || st === 'NOK' || st === 'NA') checkedCount++;
+        if (st === 'NOK') hasNok = true;
+      }
+
+      const banner = document.getElementById('ronda-status-banner');
+      const icon = document.getElementById('ronda-status-icon');
+      const text = document.getElementById('ronda-status-text');
+      const badge = document.getElementById('ronda-progress-badge');
+
+      badge.textContent = `${checkedCount}/${totalPoints} puntos`;
+
+      if (hasNok) {
+        banner.className = 'rounded-xl p-3.5 flex items-center justify-between bg-red-600 text-white font-bold transition-all shadow-md';
+        icon.className = 'fa-solid fa-triangle-exclamation text-2xl';
+        text.textContent = 'FOD ROJO (INCIDENCIA DETECTADA)';
+      } else if (checkedCount === totalPoints && totalPoints > 0) {
+        banner.className = 'rounded-xl p-3.5 flex items-center justify-between bg-emerald-600 text-white font-bold transition-all shadow-md';
+        icon.className = 'fa-solid fa-shield-check text-2xl';
+        text.textContent = 'FOD VERDE (ZONA CONFORME)';
+      } else {
+        banner.className = 'rounded-xl p-3.5 flex items-center justify-between bg-slate-200 text-slate-700 font-bold transition-all shadow-sm';
+        icon.className = 'fa-solid fa-circle-question text-xl';
+        text.textContent = 'PENDIENTE DE COMPLETAR';
+      }
+    }
+
+    function saveRondaInspection() {
+      const cw = document.getElementById('ronda-cw').value;
+      const day = document.getElementById('ronda-day').value;
+      const shift = document.getElementById('ronda-shift').value;
+      const zoneId = document.getElementById('ronda-zone').value;
+      const empId = document.getElementById('ronda-emp-id').value.trim();
+      const empName = document.getElementById('ronda-emp-name').value.trim();
+
+      if (!empId || !empName) {
+        alert('Por favor, indica el Nº de Empleado y el Nombre del responsable de la supervisión.');
+        return;
+      }
+
+      const zone = appState.zones[zoneId];
+      if (!zone) return;
+      const points = zone.points || [];
+      let hasNok = false;
+
+      for (let i = 0; i < points.length; i++) {
+        const st = currentRondaPointsState[i]?.status;
+        if (!st) {
+          alert(`Falta por revisar el punto #${i + 1} del checklist (marca OK, NO OK o N/A).`);
+          return;
+        }
+        if (st === 'NOK') {
+          hasNok = true;
+          if (!currentRondaPointsState[i].comment.trim()) {
+            alert(`Describe la incidencia FOD detectada en el punto #${i + 1}.`);
+            return;
+          }
+        }
+      }
+
+      const resultStatus = hasNok ? 'FOD ROJO' : 'FOD VERDE';
+
+      const existingIndex = appState.inspections.findIndex(
+        ins => ins.cw === cw && ins.day === day && ins.shift === shift && ins.zoneId === zoneId
+      );
+
+      const inspectionRecord = {
+        id: `${cw}-${day}-${shift}-Z${zoneId}`,
+        cw,
+        day,
+        shift,
+        zoneId,
+        zoneName: zone.name,
+        empId,
+        empName,
+        result: resultStatus,
+        pointsState: JSON.parse(JSON.stringify(currentRondaPointsState)),
+        timestamp: new Date().toLocaleString('es-ES')
+      };
+
+      if (existingIndex >= 0) {
+        appState.inspections[existingIndex] = inspectionRecord;
+      } else {
+        appState.inspections.push(inspectionRecord);
+      }
+
+      points.forEach((pointText, idx) => {
+        const pState = currentRondaPointsState[idx];
+        const incId = `INC-${cw}-${day}-${shift}-Z${zoneId}-P${idx}`;
+        const existingIncIdx = appState.incidents.findIndex(inc => inc.id === incId);
+
+        if (pState.status === 'NOK') {
+          const incRecord = {
+            id: incId,
+            cw,
+            day,
+            shift,
+            zoneId,
+            zoneName: zone.name,
+            pointText,
+            empId,
+            empName,
+            description: pState.comment.trim(),
+            photo: pState.photo || null,
+            resolved: existingIncIdx >= 0 ? appState.incidents[existingIncIdx].resolved : false,
+            resolvedByEmpId: existingIncIdx >= 0 ? appState.incidents[existingIncIdx].resolvedByEmpId : '',
+            createdAt: new Date().toLocaleString('es-ES')
+          };
+          if (existingIncIdx >= 0) {
+            appState.incidents[existingIncIdx] = incRecord;
+          } else {
+            appState.incidents.unshift(incRecord);
+          }
+        }
+      });
+
+      saveState();
+      showToast(`Ronda guardada como ${resultStatus}`);
+    }
+
+    // ==========================================
+    // PESTAÑA 2: INCIDENCIAS FOD
+    // ==========================================
+    function renderIncidents() {
+      const cwFilter = document.getElementById('filter-inc-cw').value;
+      const dayFilter = document.getElementById('filter-inc-day').value;
+      const statusFilter = document.getElementById('filter-inc-status').value;
+
+      const container = document.getElementById('incidents-list-container');
+      container.innerHTML = '';
+
+      const filtered = appState.incidents.filter(inc => {
+        if (cwFilter !== 'TODAS' && inc.cw !== cwFilter) return false;
+        if (dayFilter !== 'TODOS' && inc.day !== dayFilter) return false;
+        if (statusFilter === 'PENDIENTE' && inc.resolved) return false;
+        if (statusFilter === 'RESUELTA' && !inc.resolved) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-xl border border-slate-200 p-8 text-center space-y-2">
+            <i class="fa-solid fa-shield-cat text-3xl text-emerald-500"></i>
+            <p class="text-sm font-bold text-slate-700">No hay incidencias FOD con estos filtros</p>
+            <p class="text-xs text-slate-400">Todas las áreas inspeccionadas se encuentran bajo control.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach(inc => {
+        const displayZoneName = appState.zones[inc.zoneId]?.name || inc.zoneName;
+        const card = document.createElement('div');
+        card.className = `bg-white rounded-xl shadow-sm border-l-4 p-4 space-y-3 ${
+          inc.resolved ? 'border-l-emerald-500 border-slate-200' : 'border-l-red-600 border-slate-200'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="bg-slate-900 text-white text-[11px] font-bold px-2 py-0.5 rounded">${inc.cw}</span>
+                <span class="bg-slate-100 text-slate-700 text-[11px] font-bold px-2 py-0.5 rounded">${inc.day} · ${inc.shift}</span>
+                <span class="bg-blue-50 text-blue-800 text-[11px] font-bold px-2 py-0.5 rounded">${displayZoneName}</span>
+              </div>
+              <h3 class="text-xs font-bold text-slate-500 mt-1.5">Punto: <span class="text-slate-800">${inc.pointText}</span></h3>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold shrink-0 ${
+              inc.resolved ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
+            }">
+              ${inc.resolved ? 'RESUELTA' : 'PENDIENTE'}
+            </span>
+          </div>
+
+          <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200/80 flex items-start justify-between gap-3">
+            <div class="space-y-1">
+              <p class="text-xs text-slate-800 font-medium"><i class="fa-solid fa-comment-dots text-red-500 mr-1"></i> ${inc.description}</p>
+              <p class="text-[11px] text-slate-500">Detectado por: <strong>${inc.empName}</strong> (Nº ${inc.empId})</p>
+            </div>
+            ${inc.photo ? `
+              <img src="${inc.photo}" onclick="openPhotoModal('${inc.photo}', '${displayZoneName} - ${inc.day}')"
+                class="h-14 w-14 object-cover rounded-lg border border-slate-300 shrink-0 cursor-pointer hover:opacity-90">
+            ` : ''}
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            ${inc.resolved ? `
+              <div class="text-xs text-emerald-700 font-semibold flex items-center space-x-1.5">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Subsanada por Empleado Nº: <strong>${inc.resolvedByEmpId}</strong></span>
+              </div>
+              <button onclick="reopenIncident('${inc.id}')" class="text-xs text-slate-400 hover:text-red-600 underline self-end sm:self-auto">
+                Reabrir incidencia
+              </button>
+            ` : `
+              <div class="flex items-center space-x-2 w-full">
+                <input type="text" id="resolve-emp-${inc.id}" placeholder="Nº Empleado que resuelve..."
+                  class="flex-1 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500">
+                <button onclick="resolveIncident('${inc.id}')"
+                  class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center space-x-1 shrink-0">
+                  <i class="fa-solid fa-check"></i>
+                  <span>Marcar Resuelta</span>
+                </button>
+              </div>
+            `}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function resolveIncident(incId) {
+      const input = document.getElementById(`resolve-emp-${incId}`);
+      const resolverId = input.value.trim();
+      if (!resolverId) {
+        alert('Introduce el Nº de Empleado de la persona que ha resuelto la incidencia FOD.');
+        return;
+      }
+      const inc = appState.incidents.find(i => i.id === incId);
+      if (inc) {
+        inc.resolved = true;
+        inc.resolvedByEmpId = resolverId;
+        saveState();
+        renderIncidents();
+        showToast('Incidencia resuelta y sincronizada');
+      }
+    }
+
+    function reopenIncident(incId) {
+      const inc = appState.incidents.find(i => i.id === incId);
+      if (inc) {
+        inc.resolved = false;
+        inc.resolvedByEmpId = '';
+        saveState();
+        renderIncidents();
+      }
+    }
+
+    function updatePendingIncidentsBadge() {
+      const pendingCount = (appState.incidents || []).filter(i => !i.resolved).length;
+      const badge = document.getElementById('nav-inc-badge');
+      if (pendingCount > 0) {
+        badge.textContent = pendingCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    // ==========================================
+    // PESTAÑA 3: CUADRANTE SEMANAL DINÁMICO
+    // ==========================================
+    function renderRoster() {
+      const cw = document.getElementById('roster-cw').value;
+      const container = document.getElementById('roster-grid-container');
+      container.innerHTML = '';
+
+      if (!appState.roster[cw]) appState.roster[cw] = {};
+      const zoneIds = getZoneIds();
+
+      SHIFTS.forEach(shift => {
+        if (!appState.roster[cw][shift]) appState.roster[cw][shift] = {};
+        const block = document.createElement('div');
+        block.className = 'border border-slate-200 rounded-xl overflow-hidden';
+
+        let rowsHtml = '';
+        zoneIds.forEach(zoneId => {
+          const current = appState.roster[cw][shift][zoneId] || { empId: '', name: '' };
+          rowsHtml += `
+            <div class="p-2.5 bg-white grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+              <div class="sm:col-span-4 text-xs font-bold text-slate-700">
+                ${appState.zones[zoneId].name}
+              </div>
+              <div class="sm:col-span-3">
+                <input type="text" data-shift="${shift}" data-zone="${zoneId}" data-field="empId"
+                  value="${current.empId || ''}" placeholder="Nº Empleado"
+                  class="roster-input w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+              </div>
+              <div class="sm:col-span-5">
+                <input type="text" data-shift="${shift}" data-zone="${zoneId}" data-field="name"
+                  value="${current.name || ''}" placeholder="Nombre completo"
+                  class="roster-input w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold">
+              </div>
+            </div>
+          `;
+        });
+
+        block.innerHTML = `
+          <div class="bg-slate-100 px-3 py-2 border-b border-slate-200 font-bold text-xs text-slate-800 uppercase tracking-wider">
+            <i class="fa-solid fa-clock text-blue-600 mr-1"></i> Turno ${shift}
+          </div>
+          <div class="divide-y divide-slate-100">${rowsHtml}</div>
+        `;
+        container.appendChild(block);
+      });
+    }
+
+    function saveRoster() {
+      const cw = document.getElementById('roster-cw').value;
+      if (!appState.roster[cw]) appState.roster[cw] = {};
+
+      document.querySelectorAll('.roster-input').forEach(input => {
+        const shift = input.getAttribute('data-shift');
+        const zone = input.getAttribute('data-zone');
+        const field = input.getAttribute('data-field');
+        if (!appState.roster[cw][shift]) appState.roster[cw][shift] = {};
+        if (!appState.roster[cw][shift][zone]) appState.roster[cw][shift][zone] = { empId: '', name: '' };
+        appState.roster[cw][shift][zone][field] = input.value.trim();
+      });
+
+      saveState();
+      showToast(`Cuadrante de ${cw} publicado`);
+    }
+
+    // ==========================================
+    // PESTAÑA 4: INFORME DIARIO PDF DINÁMICO
+    // ==========================================
+    function renderReportPreview() {
+      const cw = document.getElementById('report-cw').value;
+      const day = document.getElementById('report-day').value;
+      const zoneIds = getZoneIds();
+
+      document.getElementById('pdf-header-date').textContent = `${cw} - ${day}`;
+      document.getElementById('pdf-header-timestamp').textContent = `Generado: ${new Date().toLocaleString('es-ES')}`;
+
+      // Cabecera dinámica de tabla según las zonas configuradas
+      const theadTr = document.getElementById('pdf-rondas-thead-tr');
+      let headHtml = `<th class="p-2 font-bold">Turno</th>`;
+      zoneIds.forEach(zid => {
+        headHtml += `<th class="p-2 font-bold">${appState.zones[zid].name}</th>`;
+      });
+      theadTr.innerHTML = headHtml;
+
+      const tbody = document.getElementById('pdf-rondas-tbody');
+      tbody.innerHTML = '';
+
+      SHIFTS.forEach(shift => {
+        const tr = document.createElement('tr');
+        let cells = `<td class="p-2 font-bold text-slate-800">${shift}</td>`;
+
+        zoneIds.forEach(zoneId => {
+          const ins = appState.inspections.find(
+            i => i.cw === cw && i.day === day && i.shift === shift && i.zoneId === zoneId
+          );
+          if (ins) {
+            const isGreen = ins.result === 'FOD VERDE';
+            cells += `
+              <td class="p-2">
+                <span class="inline-block px-2 py-0.5 rounded font-bold text-[10px] ${
+                  isGreen ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                }">${ins.result}</span>
+                <div class="text-[10px] text-slate-500 mt-0.5">${ins.empName} (${ins.empId})</div>
+              </td>
+            `;
+          } else {
+            cells += `<td class="p-2 text-slate-400 italic text-[11px]">Sin registrar</td>`;
+          }
+        });
+
+        tr.innerHTML = cells;
+        tbody.appendChild(tr);
+      });
+
+      const incContainer = document.getElementById('pdf-incidents-container');
+      incContainer.innerHTML = '';
+      const dayIncidents = appState.incidents.filter(i => i.cw === cw && i.day === day);
+
+      if (dayIncidents.length === 0) {
+        incContainer.innerHTML = `
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 font-semibold">
+            0 Incidencias FOD registradas en esta jornada. Todas las zonas auditadas conformes.
+          </div>
+        `;
+      } else {
+        dayIncidents.forEach(inc => {
+          const displayZoneName = appState.zones[inc.zoneId]?.name || inc.zoneName;
+          const item = document.createElement('div');
+          item.className = 'p-3 border border-slate-200 rounded-lg flex items-start justify-between gap-3 text-xs';
+          item.innerHTML = `
+            <div class="space-y-1">
+              <div class="font-bold text-slate-900">
+                [${inc.shift} - ${displayZoneName}] ${inc.pointText}
+              </div>
+              <div class="text-slate-700"><strong>Hallazgo:</strong> ${inc.description}</div>
+              <div class="text-[11px] text-slate-500">
+                Reportado por: ${inc.empName} (${inc.empId}) · 
+                Estado: <strong class="${inc.resolved ? 'text-emerald-700' : 'text-red-600'}">
+                  ${inc.resolved ? `RESUELTA (Nº ${inc.resolvedByEmpId})` : 'PENDIENTE'}
+                </strong>
+              </div>
+            </div>
+            ${inc.photo ? `<img src="${inc.photo}" class="h-14 w-14 object-cover rounded border border-slate-300 shrink-0">` : ''}
+          `;
+          incContainer.appendChild(item);
+        });
+      }
+    }
+
+    function exportReportToPDF() {
+      const cw = document.getElementById('report-cw').value;
+      const day = document.getElementById('report-day').value;
+      const element = document.getElementById('pdf-report-template');
+
+      const opt = {
+        margin: 8,
+        filename: `Informe_FOD_Getafe_${cw}_${day}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      showToast('Generando PDF...');
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // ==========================================
+    // PESTAÑA 5: GESTIÓN DE ZONAS Y CONFIGURACIÓN
+    // ==========================================
+    function renderConfigChecklist() {
+      document.getElementById('firebase-url-input').value = firebaseBaseUrl || '';
+      const zoneId = document.getElementById('config-zone-select').value;
+      const zone = appState.zones[zoneId];
+      const list = document.getElementById('config-points-list');
+      const nameInput = document.getElementById('edit-zone-name-input');
+      list.innerHTML = '';
+
+      if (!zone) return;
+      nameInput.value = zone.name;
+
+      (zone.points || []).forEach((pt, idx) => {
+        const li = document.createElement('li');
+        li.className = 'p-3 bg-white flex items-center justify-between gap-2 text-xs font-medium text-slate-800';
+        li.innerHTML = `
+          <span><strong class="text-slate-400 mr-1.5">#${idx + 1}</strong> ${pt}</span>
+          <button onclick="removeConfigPoint(${idx})" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition" title="Borrar punto">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    function renameSelectedZone() {
+      const zoneId = document.getElementById('config-zone-select').value;
+      const newName = document.getElementById('edit-zone-name-input').value.trim();
+      if (!newName) {
+        alert('El nombre de la zona no puede estar vacío.');
+        return;
+      }
+      if (appState.zones[zoneId]) {
+        appState.zones[zoneId].name = newName;
+        saveState();
+        populateZoneSelects();
+        renderConfigChecklist();
+        showToast('Nombre de zona actualizado');
+      }
+    }
+
+    function addNewZone() {
+      const zoneIds = getZoneIds();
+      const nextNum = zoneIds.length > 0 ? Math.max(...zoneIds.map(Number)) + 1 : 1;
+      const defaultName = `Zona ${nextNum}`;
+      const customName = prompt('Introduce el nombre de la nueva zona:', defaultName);
+      if (customName === null) return;
+      const finalName = customName.trim() || defaultName;
+      const newId = String(nextNum);
+
+      appState.zones[newId] = {
+        name: finalName,
+        points: [
+          'Área limpia y libre de objetos extraños (FOD)'
+        ]
+      };
+
+      saveState();
+      populateZoneSelects();
+      document.getElementById('config-zone-select').value = newId;
+      document.getElementById('ronda-zone').value = newId;
+      renderConfigChecklist();
+      showToast(`Añadida ${finalName}`);
+    }
+
+    function deleteSelectedZone() {
+      const zoneIds = getZoneIds();
+      if (zoneIds.length <= 1) {
+        alert('Debe existir al menos una zona activa en el taller.');
+        return;
+      }
+      const zoneId = document.getElementById('config-zone-select').value;
+      const zoneName = appState.zones[zoneId]?.name || 'esta zona';
+      if (!confirm(`¿Seguro que deseas eliminar "${zoneName}" y todos sus puntos de control?`)) return;
+
+      delete appState.zones[zoneId];
+      saveState();
+      populateZoneSelects();
+      renderConfigChecklist();
+      showToast('Zona eliminada');
+    }
+
+    function addConfigPoint() {
+      const zoneId = document.getElementById('config-zone-select').value;
+      const input = document.getElementById('new-point-input');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!appState.zones[zoneId].points) appState.zones[zoneId].points = [];
+      appState.zones[zoneId].points.push(val);
+      input.value = '';
+      saveState();
+      renderConfigChecklist();
+      showToast('Punto añadido y sincronizado');
+    }
+
+    function removeConfigPoint(idx) {
+      const zoneId = document.getElementById('config-zone-select').value;
+      appState.zones[zoneId].points.splice(idx, 1);
+      saveState();
+      renderConfigChecklist();
+      showToast('Punto eliminado');
+    }
+
+    function resetDemoData() {
+      if (confirm('¿Seguro que deseas restaurar las zonas por defecto (Zona 1, Zona 2, Zona 3) y limpiar el historial guardado?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        appState = JSON.parse(JSON.stringify(defaultState));
+        saveState();
+        initApp();
+        showToast('Datos restaurados de fábrica');
+      }
+    }
+
+    function openPhotoModal(src, title) {
+      document.getElementById('photo-modal-img').src = src;
+      document.getElementById('photo-modal-title').textContent = title || 'Evidencia Fotográfica FOD';
+      document.getElementById('photo-modal').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+      document.getElementById('photo-modal').classList.add('hidden');
+    }
+
+    function initApp() {
+      if (!localStorage.getItem(STORAGE_KEY)) {
+        appState.currentCW = getCurrentISOWeek();
+      }
+      populateCWSelects();
+      populateZoneSelects();
+      updatePendingIncidentsBadge();
+      onRondaContextChange();
+
+      if (firebaseBaseUrl) {
+        pullFromCloud(false);
+        startRealtimeStream();
+      } else {
+        updateCloudIndicator('local', 'Modo Local');
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
