@@ -309,58 +309,6 @@
          ========================================== -->
     <section id="tab-config" class="tab-content hidden space-y-4">
       
-      <!-- Gestión de Zonas y Puntos de Checklist -->
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <div>
-            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
-              <i class="fa-solid fa-map-location-dot text-blue-600 mr-1.5"></i> Gestión de Zonas y Checklist
-            </h2>
-            <p class="text-xs text-slate-500 mt-0.5">Edita el nombre de cada zona, añade o elimina zonas y configura sus puntos.</p>
-          </div>
-          <button onclick="addNewZone()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 shadow-sm transition">
-            <i class="fa-solid fa-plus"></i>
-            <span>Nueva Zona</span>
-          </button>
-        </div>
-
-        <!-- Selector de Zona a editar -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">SELECCIONAR ZONA</label>
-          <select id="config-zone-select" onchange="renderConfigChecklist()" class="w-full bg-blue-50 border border-blue-300 text-blue-900 rounded-lg px-3 py-2 text-sm font-bold outline-none"></select>
-        </div>
-
-        <!-- Editar Nombre de la Zona o Eliminarla -->
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
-          <label class="block text-xs font-semibold text-slate-600">NOMBRE DE LA ZONA SELECCIONADA</label>
-          <div class="flex flex-wrap sm:flex-nowrap gap-2">
-            <input type="text" id="edit-zone-name-input" placeholder="Ej. Zona 1" class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="renameSelectedZone()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 transition">
-              <i class="fa-solid fa-pen-to-square"></i>
-              <span>Renombrar</span>
-            </button>
-            <button onclick="deleteSelectedZone()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1 shrink-0 transition" title="Eliminar esta zona">
-              <i class="fa-solid fa-trash-can"></i>
-              <span>Borrar Zona</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Puntos del Checklist de la Zona -->
-        <div class="space-y-2.5 pt-1">
-          <label class="block text-xs font-semibold text-slate-500 uppercase">Puntos de control FOD de esta zona</label>
-          <div class="flex space-x-2">
-            <input type="text" id="new-point-input" placeholder="Añadir nuevo punto de control FOD..." class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            <button onclick="addConfigPoint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm flex items-center space-x-1 shrink-0 transition">
-              <i class="fa-solid fa-plus"></i>
-              <span>Añadir</span>
-            </button>
-          </div>
-
-          <ul id="config-points-list" class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden"></ul>
-        </div>
-      </div>
-
       <!-- Panel de Sincronización en la Nube (Firebase) -->
       <div class="bg-white rounded-xl shadow-sm border border-blue-200 p-4 space-y-3">
         <div class="flex items-center justify-between">
@@ -375,7 +323,7 @@
         <div class="space-y-2">
           <label class="block text-xs font-semibold text-slate-600">URL DE FIREBASE REALTIME DATABASE</label>
           <input type="url" id="firebase-url-input"
-            value="https://fod-mro-getafe-v2-default-rtdb.europe-west1.firebasedatabase.app"
+            value="https://fod-mro-getafe-default-rtdb.europe-west1.firebasedatabase.app"
             class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none">
         </div>
 
@@ -408,6 +356,54 @@
           <div id="qrcode-box" class="p-3 bg-white border-2 border-slate-900 rounded-xl"></div>
           <p id="qr-url-label" class="text-[11px] font-mono text-slate-500 break-all text-center"></p>
         </div>
+      </div>
+
+      <!-- Configuración de Zonas y Puntos de Checklist -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div>
+            <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">
+              <i class="fa-solid fa-list-check text-blue-600 mr-1.5"></i> Configurar Zonas y Puntos de Checklist
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Edita el nombre de las zonas, añade o borra zonas y configura sus puntos.</p>
+          </div>
+          <button onclick="addNewZone()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 shadow-sm transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Nueva Zona</span>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">SELECCIONAR ZONA A EDITAR</label>
+          <select id="config-zone-select" onchange="renderConfigChecklist()" class="w-full bg-blue-50 border border-blue-300 text-blue-900 rounded-lg px-3 py-2 text-sm font-bold outline-none"></select>
+        </div>
+
+        <!-- Editar Nombre de la Zona o Borrarla -->
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <label class="block text-xs font-semibold text-slate-600">NOMBRE DE LA ZONA SELECCIONADA</label>
+          <div class="flex flex-wrap sm:flex-nowrap gap-2">
+            <input type="text" id="edit-zone-name-input" placeholder="Ej. Zona 1" class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none">
+            <button onclick="renameSelectedZone()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3.5 py-2 rounded-lg text-xs flex items-center space-x-1.5 shrink-0 transition">
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span>Renombrar</span>
+            </button>
+            <button onclick="deleteSelectedZone()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold px-3 py-2 rounded-lg text-xs flex items-center space-x-1 shrink-0 transition" title="Eliminar esta zona">
+              <i class="fa-solid fa-trash-can"></i>
+              <span>Borrar Zona</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Añadir Puntos al Checklist -->
+        <div class="flex space-x-2">
+          <input type="text" id="new-point-input" placeholder="Nuevo punto de control FOD..." class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          <button onclick="addConfigPoint()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm flex items-center space-x-1 shrink-0">
+            <i class="fa-solid fa-plus"></i>
+            <span>Añadir</span>
+          </button>
+        </div>
+
+        <ul id="config-points-list" class="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden"></ul>
 
         <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
           <span class="text-xs text-slate-400">FOD MRO Getafe v2.3 PWA</span>
@@ -463,7 +459,7 @@
       </button>
       <button onclick="switchTab('config')" id="nav-config" class="nav-btn py-2.5 flex flex-col items-center justify-center text-slate-400 font-medium">
         <i class="fa-solid fa-sliders text-lg"></i>
-        <span class="text-[11px] mt-0.5">Zonas/Cloud</span>
+        <span class="text-[11px] mt-0.5">Puntos/Cloud</span>
       </button>
     </div>
   </nav>
@@ -515,36 +511,36 @@
           name: 'Zona 1',
           points: [
             'Bancos libres de tornillería, remaches y restos metálicos',
-            'Zona de utillaje correctamente colocada',
-            'Bancos de trabajo recogidos',
-            'Jaula de elementos auxiliares y maletines ok'
+            'Panorámico de herramientas sombra 100% completo y cuadrado',
+            'Suelo perimetral de bancos barrido y sin virutas',
+            'Contenedores FOD cerrados e identificados correctamente'
           ]
         },
         '2': {
           name: 'Zona 2',
           points: [
-            'Estanterias sin elementos no identificados',
-            'Zona de utillaje correctamente colocada',
-            'Bancos de trabajo recogidos',
-            'Jaula de elementos auxiliares y maletines ok'
+            'Bandejas de tornos y fresadoras limpias de viruta sobrante',
+            'Equipos de medición calibrados y guardados en sus estuches',
+            'Ausencia de trapos, papeles o EPPs abandonados sobre máquinas',
+            'Rejillas de drenaje y cableado libres de objetos sueltos'
           ]
         },
         '3': {
           name: 'Zona 3',
           points: [
-            'Zona cockpit recogida y protecciones colocadas',
-            'Conectores y zonas expuestas protegidos o tapados',
-            'Sin herramientas ni elementos no autorizados dentro de avión',
-            'Sin virutas ni FOD en suelo / gradas / bancos'
+            'Pasillos de tránsito peatonal y carros libres de obstáculos',
+            'Cajas de subconjuntos aeronáuticos tapadas y protegidas',
+            'Zona de consumibles sin precintos, alambres o plásticos en el suelo',
+            'Carros de transporte de piezas limpios antes de cambio de turno'
           ]
         }
       },
       roster: {
         'CW42': {
           'Mañana': {
-            '1': { empId: '10234', name: 'Jose Javier Fernández' },
-            '2': { empId: '10512', name: 'Alberto Alameda' },
-            '3': { empId: '10890', name: 'Nicolás Jarillo' }
+            '1': { empId: '10234', name: 'Carlos Mendoza' },
+            '2': { empId: '10512', name: 'Laura Gómez' },
+            '3': { empId: '10890', name: 'Javier Ruiz' }
           }
         }
       },
@@ -811,9 +807,6 @@
       refreshActiveViews();
     }
 
-    // ==========================================
-    // PESTAÑA 1: RONDA FOD (OK / NO OK / N/A)
-    // ==========================================
     function onRondaContextChange() {
       const cw = document.getElementById('ronda-cw').value;
       const day = document.getElementById('ronda-day').value;
@@ -890,7 +883,7 @@
                   : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-emerald-50'
               }">
               <i class="fa-solid fa-check"></i>
-              <span>OK</span>
+              <span>OK (VERDE)</span>
             </button>
 
             <button type="button" onclick="setPointStatus(${idx}, 'NOK')"
@@ -900,7 +893,7 @@
                   : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-red-50'
               }">
               <i class="fa-solid fa-xmark"></i>
-              <span>NO OK</span>
+              <span>NO OK (ROJO)</span>
             </button>
 
             <button type="button" onclick="setPointStatus(${idx}, 'NA')"
@@ -1114,9 +1107,6 @@
       showToast(`Ronda guardada como ${resultStatus}`);
     }
 
-    // ==========================================
-    // PESTAÑA 2: INCIDENCIAS FOD
-    // ==========================================
     function renderIncidents() {
       const cwFilter = document.getElementById('filter-inc-cw').value;
       const dayFilter = document.getElementById('filter-inc-day').value;
@@ -1174,7 +1164,7 @@
               <p class="text-[11px] text-slate-500">Detectado por: <strong>${inc.empName}</strong> (Nº ${inc.empId})</p>
             </div>
             ${inc.photo ? `
-              <img src="${inc.photo}" onclick="openPhotoModal('${inc.photo}', '${displayZoneName} - ${inc.day}')"
+              <img src="${inc.photo}" onclick="openPhotoModal('${inc.photo}', '${displayZoneName} -${inc.day}')"
                 class="h-14 w-14 object-cover rounded-lg border border-slate-300 shrink-0 cursor-pointer hover:opacity-90">
             ` : ''}
           </div>
@@ -1243,9 +1233,6 @@
       }
     }
 
-    // ==========================================
-    // PESTAÑA 3: CUADRANTE SEMANAL DINÁMICO
-    // ==========================================
     function renderRoster() {
       const cw = document.getElementById('roster-cw').value;
       const container = document.getElementById('roster-grid-container');
@@ -1308,9 +1295,6 @@
       showToast(`Cuadrante de ${cw} publicado`);
     }
 
-    // ==========================================
-    // PESTAÑA 4: INFORME DIARIO PDF DINÁMICO
-    // ==========================================
     function renderReportPreview() {
       const cw = document.getElementById('report-cw').value;
       const day = document.getElementById('report-day').value;
@@ -1319,7 +1303,6 @@
       document.getElementById('pdf-header-date').textContent = `${cw} - ${day}`;
       document.getElementById('pdf-header-timestamp').textContent = `Generado: ${new Date().toLocaleString('es-ES')}`;
 
-      // Cabecera dinámica de tabla según las zonas configuradas
       const theadTr = document.getElementById('pdf-rondas-thead-tr');
       let headHtml = `<th class="p-2 font-bold">Turno</th>`;
       zoneIds.forEach(zid => {
@@ -1409,9 +1392,6 @@
       html2pdf().set(opt).from(element).save();
     }
 
-    // ==========================================
-    // PESTAÑA 5: GESTIÓN DE ZONAS Y CONFIGURACIÓN
-    // ==========================================
     function renderConfigChecklist() {
       document.getElementById('firebase-url-input').value = firebaseBaseUrl || '';
       const zoneId = document.getElementById('config-zone-select').value;
@@ -1428,7 +1408,7 @@
         li.className = 'p-3 bg-white flex items-center justify-between gap-2 text-xs font-medium text-slate-800';
         li.innerHTML = `
           <span><strong class="text-slate-400 mr-1.5">#${idx + 1}</strong> ${pt}</span>
-          <button onclick="removeConfigPoint(${idx})" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition" title="Borrar punto">
+          <button onclick="removeConfigPoint(${idx})" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition">
             <i class="fa-solid fa-trash-can"></i>
           </button>
         `;
@@ -1515,7 +1495,7 @@
     }
 
     function resetDemoData() {
-      if (confirm('¿Seguro que deseas restaurar las zonas por defecto (Zona 1, Zona 2, Zona 3) y limpiar el historial guardado?')) {
+      if (confirm('¿Seguro que deseas restaurar los puntos y borrar el historial guardado?')) {
         localStorage.removeItem(STORAGE_KEY);
         appState = JSON.parse(JSON.stringify(defaultState));
         saveState();
