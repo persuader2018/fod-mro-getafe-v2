@@ -658,7 +658,7 @@
     async function pullFromCloud(notifyUser = false) {
       if (!firebaseBaseUrl) return;
       try {
-        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json`);
+        const res = await fetch(`${firebaseBaseUrl}/fod_getafe_state.json`, { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const remoteData = await res.json();
         if (remoteData) {
